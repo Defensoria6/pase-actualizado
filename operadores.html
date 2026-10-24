@@ -756,6 +756,19 @@ function getEmpName(id){ const e=CONFIG.empleados.find(x=>x.id===id); return e?e
 function getSecName(id){ const s=CONFIG.secretarios.find(x=>x.id===id); return s?s.nombre:'—'; }
 function esNumeroValido(num){ if(!num||typeof num!=='string') return false; const t=num.trim(); return t!=='' && !t.includes('undefined') && !t.includes('null'); }
 function estaEmpleadoAusente(id){ return state.empleadosAusentes.includes(id); }
+// Empleados excluidos de toda asignación (aunque no estén marcados como ausentes)
+const EMPLEADOS_EXCLUIDOS = ['emp10']; // Ortega Lucia Noemi
+// El operador con sesión activa (clave usada) no recibe pases: se excluye automáticamente su empleado
+const OPERADOR_EMPLEADO = {
+  'Cardozo Raquel':'emp3',      // Cardozo Maria Raquel
+  'Cedron Noelia':'emp4',       // Cedron Noelia
+  'Fioravante Rómulo':'emp6',   // Fioravante Rómulo
+  'Gonzalez Misael':'emp7',     // Gonzalez Alberto Misael
+  'Pablos Patricia':'emp11'     // Pablos Patricia Tamara
+  // 'Boillat Enrique': sin empleado equivalente en la lista
+};
+function esOperadorActivo(id){ return !!currentOperator && OPERADOR_EMPLEADO[currentOperator] === id; }
+function empleadoNoAsignable(id){ return EMPLEADOS_EXCLUIDOS.includes(id) || esOperadorActivo(id) || estaEmpleadoAusente(id); }
 
 function showToast(msg, type='success'){
   const c = document.getElementById('toastContainer');
@@ -902,12 +915,12 @@ function getSortedSecretarios(){ return [...CONFIG.secretarios].sort((a,b)=>a.no
 function getNextEmployeeSinSideEffects(){
   const sorted = getSortedEmployees();
   if(sorted.length === 0) return { empleado:null, position:0, total:0, sinDisponibles:true };
-  const disponibles = sorted.filter(e => !estaEmpleadoAusente(e.id));
+  const disponibles = sorted.filter(e => !empleadoNoAsignable(e.id));
   if(disponibles.length === 0) return { empleado:null, position:0, total:sorted.length, sinDisponibles:true };
   let startIdx = state.lastEmployeeIndex < 0 ? 0 : (state.lastEmployeeIndex + 1) % sorted.length;
   for(let i=0; i<sorted.length; i++){
     const idx = (startIdx + i) % sorted.length;
-    if(!estaEmpleadoAusente(sorted[idx].id)){
+    if(!empleadoNoAsignable(sorted[idx].id)){
       const posDisponible = disponibles.findIndex(e=>e.id===sorted[idx].id) + 1;
       return { empleado:sorted[idx], newIndex:idx, position:posDisponible, total:disponibles.length, totalGlobal:sorted.length };
     }
@@ -963,7 +976,7 @@ function contarCausasEquidad(tipo, empId){
 }
 function getNextEmployeePorTipo(tipo){
   const sorted = getSortedEmployees();
-  const disponibles = sorted.filter(e => !estaEmpleadoAusente(e.id));
+  const disponibles = sorted.filter(e => !empleadoNoAsignable(e.id));
   if(disponibles.length === 0) return { empleado:null, position:0, total:sorted.length, sinDisponibles:true };
   const t = normTipoEq(tipo);
   const etiqueta = t===TIPO_FC ? `FormCEJUME ${new Date().getFullYear()}` : (t===TIPO_NPVF ? 'N.P.V.F.' : 'Nuevo Patrocinio');
