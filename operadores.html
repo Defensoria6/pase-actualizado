@@ -931,6 +931,53 @@ function getNextSecretarioSinSideEffects(){
   return { secretario:null, position:0, total:sorted.length, sinDisponibles:true };
 }
 
+// ============================================================
+// ASIGNACIÓN POR TIPO DE CAUSA (según tablas del panel de Secretarios)
+//  - Nuevo patrocinio ................... columna "Total" de la tabla Nuevo Patrocinio
+//  - Nuevo patrocinio Violencia Familiar . columna "N.P.V.F." de la tabla Nuevo Patrocinio
+//  - CEJUME Formulario .................. total del año en curso de la tabla FormCEJUME
+// Recibe el pase el empleado disponible con MENOR cantidad registrada.
+// ============================================================
+const TIPO_NP = 'nuevo patrocinio';
+const TIPO_NPVF = 'nuevo patrocinio violencia familiar';
+const TIPO_FC = 'cejume formulario';
+function normTipoEq(t){ return (t||'').toString().trim().toLowerCase().replace(/\s+/g,' '); }
+function esTipoPorEquidad(tipo){ const t = normTipoEq(tipo); return t===TIPO_NP || t===TIPO_NPVF || t===TIPO_FC; }
+function fechaCausaEq(c){ const f = c.fechaAsignacion || c.fechaPaseSecretario; if(!f) return null; const d = new Date(f); return isNaN(d.getTime()) ? null : d; }
+function contarCausasEquidad(tipo, empId){
+  const t = normTipoEq(tipo);
+  const anio = new Date().getFullYear();
+  return state.causas.filter(c => {
+    const ct = normTipoEq(c.tipo);
+    if(t === TIPO_FC){
+      if(ct !== TIPO_FC) return false;
+      const d = fechaCausaEq(c);
+      if(!d || d.getFullYear() !== anio) return false;
+      return (c.empleadoAsignado || c.empleadoOriginal || c.empleadoId || null) === empId;
+    }
+    const delEmp = (c.empleadoAsignado === empId || c.empleadoOriginal === empId);
+    if(!delEmp) return false;
+    if(t === TIPO_NPVF) return ct === TIPO_NPVF;
+    return ct === TIPO_NP || ct === TIPO_NPVF; // Nuevo patrocinio: Total (normal + violencia)
+  }).length;
+}
+function getNextEmployeePorTipo(tipo){
+  const sorted = getSortedEmployees();
+  const disponibles = sorted.filter(e => !estaEmpleadoAusente(e.id));
+  if(disponibles.length === 0) return { empleado:null, position:0, total:sorted.length, sinDisponibles:true };
+  const t = normTipoEq(tipo);
+  const etiqueta = t===TIPO_FC ? `FormCEJUME ${new Date().getFullYear()}` : (t===TIPO_NPVF ? 'N.P.V.F.' : 'Nuevo Patrocinio');
+  let mejor = null, mejorCant = Infinity;
+  disponibles.forEach(e => {
+    const n = contarCausasEquidad(tipo, e.id);
+    if(n < mejorCant){ mejor = e; mejorCant = n; }
+  });
+  return { empleado:mejor, newIndex:sorted.findIndex(e=>e.id===mejor.id), position:disponibles.findIndex(e=>e.id===mejor.id)+1, total:disponibles.length, totalGlobal:sorted.length, porTipo:true, cantidad:mejorCant, etiqueta };
+}
+function getEmpleadoParaPase(tipo){
+  return esTipoPorEquidad(tipo) ? getNextEmployeePorTipo(tipo) : getNextEmployeeSinSideEffects();
+}
+
 async function guardarConfiguracion(){
   try{
     await db.collection('operador').doc('config').set({
@@ -1073,7 +1120,7 @@ async function registrarCausa(num, tipo, obs, nivel, accion, motivo, dependencia
   let estado, empleadoAsignado=null, secretarioId=null, fechaAsignacion=null, fechaLimite=null, accionHist='';
 
   if(accion === 'asignar'){
-    const emp = getNextEmployeeSinSideEffects();
+    const emp = getEmpleadoParaPase(tipo);
     const sec = getNextSecretarioSinSideEffects();
 
     if(emp.sinDisponibles) showToast('⚠️ No hay empleados disponibles (todos ausentes). Se registrará sin asignar.','warning');
@@ -1092,7 +1139,7 @@ async function registrarCausa(num, tipo, obs, nivel, accion, motivo, dependencia
     const secNombre = secretarioId ? getSecName(secretarioId) : 'Sin secretario';
     accionHist = `Asignado (Nivel ${nivel}) a ${empNombre} — Secretario: ${secNombre}`;
 
-    if(emp.empleado) state.lastEmployeeIndex = emp.newIndex;
+    if(emp.empleado && !emp.porTipo) state.lastEmployeeIndex = emp.newIndex;
     if(sec.secretario) state.lastIndex = sec.newIndex;
     await guardarConfiguracion();
   } else if(accion === 'devolver'){
@@ -1223,7 +1270,7 @@ function limpiarFiltrosPanel(){
 function render(){ renderPreview(); renderKPIs(); renderRecientes(); renderRechazados(); renderSecretariosEstado(); }
 
 function renderPreview(){
-  const emp = getNextEmployeeSinSideEffects();
+  const emp = getEmpleadoParaPase(document.getElementById('inpTipo')?.value || '');
   const sec = getNextSecretarioSinSideEffects();
 
   const empEl = document.getElementById('previewEmpleado');
@@ -1234,7 +1281,7 @@ function renderPreview(){
   if(emp.empleado){
     empEl.textContent = emp.empleado.nombre;
     empEl.className = 'value';
-    empPos.textContent = `(${emp.position}/${emp.total} disp.)`;
+    empPos.textContent = emp.porTipo ? `(${emp.cantidad} en ${emp.etiqueta})` : `(${emp.position}/${emp.total} disp.)`;
   } else {
     empEl.textContent = '⚠️ Todos ausentes';
     empEl.className = 'value text-warning';
@@ -1688,6 +1735,8 @@ document.addEventListener('DOMContentLoaded', function(){
   const inpTipo = document.getElementById('inpTipo');
   inpTipo.addEventListener('input', toggleNuevoTipoField);
   inpTipo.addEventListener('change', toggleNuevoTipoField);
+  inpTipo.addEventListener('input', renderPreview);
+  inpTipo.addEventListener('change', renderPreview);
   document.getElementById('btnGuardarNuevoTipo').addEventListener('click', guardarNuevoTipo);
 
   const accionSel = document.getElementById('inpAccion');
@@ -1720,7 +1769,7 @@ document.addEventListener('DOMContentLoaded', function(){
       if(accion==='remitir' && !dependencia){ showToast('Ingrese la dependencia','warning'); return; }
     }
 
-    const empPrev = getNextEmployeeSinSideEffects();
+    const empPrev = getEmpleadoParaPase(tipo);
     const secPrev = getNextSecretarioSinSideEffects();
 
     const ok = await registrarCausa(num, tipo, obs, nivel, accion, motivo, dependencia, modo, fuentes);
