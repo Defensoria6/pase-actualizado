@@ -33,12 +33,46 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(-
 /* LOGIN BLANCO */
 .login-overlay{position:fixed;inset:0;background:#ffffff;display:flex;justify-content:center;align-items:center;z-index:9999;padding:20px}
 .login-overlay::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 20% 15%,rgba(16,185,129,.08) 0%,transparent 45%),radial-gradient(circle at 80% 85%,rgba(6,182,212,.08) 0%,transparent 45%);pointer-events:none}
-.login-card{position:relative;background:#ffffff;border:1px solid var(--border);border-radius:28px;padding:3rem 2.5rem 2.5rem;width:100%;max-width:440px;box-shadow:0 20px 50px rgba(15,23,42,.12);text-align:center;animation:slideUp .6s cubic-bezier(.16,1,.3,1)}
+@property --ang{syntax:'<angle>';initial-value:0deg;inherits:false}
+@property --arc{syntax:'<angle>';initial-value:70deg;inherits:false}
+@keyframes orbit{to{--ang:360deg}}
+.login-card{
+  --a1:#06b6d4;--a2:#10b981;--a3:#065f46;
+  --g1:#06b6d4;--g2:#10b981;
+  --acc:#065f46;--tint:#e5f6ee;--ink-c:#064e3b;
+  --line-c:#dbeee5;--glow:rgba(16,185,129,.30);
+  --ring:7px;--ang:0deg;--arc:70deg;
+  position:relative;border:1.5px solid transparent;border-radius:28px;
+  background:
+    linear-gradient(#fff,#fff) padding-box,
+    conic-gradient(from var(--ang),transparent 0deg,transparent calc(360deg - var(--arc)),var(--a1) calc(360deg - var(--arc) * .65),var(--a2) calc(360deg - var(--arc) * .3),var(--a3) calc(360deg - 4deg),transparent 360deg) border-box,
+    linear-gradient(var(--line-c),var(--line-c)) border-box;
+  padding:3rem 2.5rem 2.5rem;width:100%;max-width:440px;
+  box-shadow:0 1px 2px rgba(15,23,42,.04),0 12px 28px -16px rgba(15,23,42,.14);
+  text-align:left;
+  animation:slideUp .6s cubic-bezier(.16,1,.3,1),orbit 9s linear infinite;
+  transition:box-shadow .35s ease,--arc .5s ease}
+.login-card:hover{--arc:150deg;box-shadow:0 1px 2px rgba(15,23,42,.05),0 26px 46px -20px var(--glow)}
 @keyframes slideUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
-.login-card .logo-icon{width:80px;height:80px;margin:0 auto 1.5rem;background:linear-gradient(135deg,var(--success),var(--accent));border-radius:24px;display:flex;align-items:center;justify-content:center;font-size:2.5rem;color:#fff;box-shadow:0 12px 32px rgba(16,185,129,.4);animation:pulse 2.5s ease-in-out infinite}
-@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
-.login-card h1{font-size:1.6rem;font-weight:800;letter-spacing:-.5px;margin-bottom:.3rem;color:var(--text)}
-.login-card .sub{color:var(--muted);font-size:.9rem;margin-bottom:2rem}
+.login-card .logo-icon{
+  width:72px;height:72px;margin:0 0 1.5rem;border-radius:22px;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  font-size:2.2rem;color:var(--acc);
+  background:linear-gradient(135deg,var(--g1),var(--g2)) center / 0% 0% no-repeat,var(--tint);
+  box-shadow:0 0 0 var(--ring) var(--line-c);
+  box-shadow:0 0 0 var(--ring) color-mix(in srgb,var(--acc) 9%,transparent);
+  transition:background-size .4s cubic-bezier(.16,1,.3,1),color .3s ease,box-shadow .35s ease,transform .35s cubic-bezier(.16,1,.3,1)}
+.login-card:hover .logo-icon{
+  background-size:100% 100%,auto;color:#fff;transform:rotate(-4deg) scale(1.05);
+  box-shadow:0 0 0 calc(var(--ring) + 3px) var(--line-c);
+  box-shadow:0 0 0 calc(var(--ring) + 3px) color-mix(in srgb,var(--acc) 14%,transparent)}
+.login-card h1{font-size:1.7rem;font-weight:800;line-height:1.1;letter-spacing:-.035em;margin-bottom:.45rem;color:#0b1f3a}
+.login-card .sub{display:flex;align-items:center;flex-wrap:wrap;gap:.5rem;font-size:.92rem;font-weight:500;color:var(--muted);margin-bottom:2rem}
+.login-card .sub .celeste{display:inline-block;padding:.18rem .65rem;border-radius:999px;background:var(--tint);color:var(--ink-c);font-weight:700;font-size:.76rem;letter-spacing:.005em}
+@media (prefers-reduced-motion:reduce){
+  .login-card{animation:none;background:linear-gradient(#fff,#fff) padding-box,linear-gradient(135deg,var(--a1),var(--a3)) border-box;transition:box-shadow .2s ease}
+  .login-card .logo-icon,.login-card:hover .logo-icon{transition:none;transform:none}
+}
 .celeste{color:var(--celeste);font-weight:800}
 .login-card .form-control,.login-card .form-select{border-radius:14px;padding:14px 18px;border:2px solid var(--border);background:#f8fafc;font-size:.95rem;margin-bottom:1rem}
 .login-card .form-control:focus,.login-card .form-select:focus{border-color:var(--success);box-shadow:0 0 0 4px rgba(16,185,129,.15);background:#fff;outline:none}
@@ -179,14 +213,14 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(-
 .dim-report-total .dim-report-count{color:#065f46;font-size:1.3rem}
 
 @media(max-width:992px){.app-header{flex-direction:column;align-items:stretch;padding:1rem}.header-actions{justify-content:stretch}}
-@media(max-width:576px){.app-wrapper{padding:12px}.card{padding:1rem;border-radius:16px}.login-card{padding:2rem 1.5rem}}
+@media(max-width:576px){.app-wrapper{padding:12px}.card{padding:1rem;border-radius:16px}.login-card{padding:2rem 1.5rem;--ring:5px}.login-card .logo-icon{width:60px;height:60px;font-size:1.8rem;border-radius:18px}}
 </style>
 </head>
 <body>
 
 <div id="loginOverlay" class="login-overlay">
   <div class="login-card">
-    <div class="logo-icon"><i class="bi bi-shield-lock-fill"></i></div>
+    <div class="logo-icon"><i class="bi bi-person-check"></i></div>
     <h1>Empleado</h1>
     <p class="sub">Pase Digital <span class="celeste">Actualizado</span></p>
     <select id="loginEmpleado" class="form-select"><option value="">Seleccione su usuario…</option></select>
