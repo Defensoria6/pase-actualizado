@@ -84,8 +84,8 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(-
 .app-wrapper.visible{display:block}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 
-.app-header{background:linear-gradient(135deg,#022c22 0%,#064e3b 50%,#065f46 100%);border-radius:24px;padding:1.2rem 2rem;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:1rem;margin-bottom:1.5rem;box-shadow:var(--shadow-lg);position:relative;overflow:hidden}
-.app-header::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 100% 0%,rgba(6,182,212,.25) 0%,transparent 50%);pointer-events:none}
+.app-header{--hd-ink:#064e3b;--hd-sub:#64748b;--hd-line:#cfeedd;--hd-tint:#ecfdf5;--hd-accent:#10b981;--hd-ring:rgba(16,185,129,.2);background:linear-gradient(135deg,#f8fdfa 0%,#e9f8f0 100%);border:1px solid #cfeedd;border-radius:24px;padding:1.2rem 2rem;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:1rem;margin-bottom:1.5rem;box-shadow:0 1px 2px rgba(15,23,42,.04),0 12px 28px -18px rgba(6,78,59,.22);position:relative;overflow:hidden}
+.app-header::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 100% 0%,rgba(16,185,129,.12) 0%,transparent 55%);pointer-events:none}
 .brand{display:flex;align-items:center;gap:14px;position:relative;z-index:1}
 .brand-icon{width:52px;height:52px;background:linear-gradient(135deg,var(--accent),var(--success));border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;color:#fff;box-shadow:0 8px 24px rgba(6,182,212,.4)}
 .brand h1{font-size:1.3rem;font-weight:800;color:#fff;letter-spacing:-.3px;line-height:1.2}
@@ -103,6 +103,21 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(-
 .btn-header{padding:9px 20px;border-radius:40px;font-weight:600;font-size:.78rem;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.1);color:#fff;transition:.2s;display:inline-flex;align-items:center;gap:6px;backdrop-filter:blur(10px)}
 .btn-header:hover{background:rgba(255,255,255,.2);transform:translateY(-1px)}
 .btn-header.danger{background:rgba(239,68,68,.2);border-color:rgba(239,68,68,.4)}
+/* ===== Encabezado: tono suave y minimalista ===== */
+.app-header .brand h1{color:var(--hd-ink)}
+.app-header .brand h1 small{color:var(--hd-sub)}
+.app-header .badge-role{background:#fff;color:var(--hd-ink);border:1px solid var(--hd-line);backdrop-filter:none}
+.app-header .badge-role:hover{background:#fff}
+.app-header .badge-role.emp{background:#e3f6ec;color:#065f46;border-color:#b7e6cd}
+.app-header .text-celeste{color:#0284c7}
+.app-header .search-box i{color:#94a3b8}
+.app-header .search-box input{background:#fff;color:var(--text);border:1px solid var(--hd-line);backdrop-filter:none}
+.app-header .search-box input::placeholder{color:#94a3b8}
+.app-header .search-box input:focus{background:#fff;border-color:var(--hd-accent);box-shadow:0 0 0 3px var(--hd-ring)}
+.app-header .btn-header:not(.primary):not(.danger){background:#fff;color:var(--hd-ink);border:1px solid var(--hd-line);backdrop-filter:none}
+.app-header .btn-header:not(.primary):not(.danger):hover{background:var(--hd-tint);border-color:var(--hd-accent)}
+.app-header .btn-header.danger{background:#fff;color:#b91c1c;border:1px solid #fecaca;backdrop-filter:none}
+.app-header .btn-header.danger:hover{background:#fef2f2;border-color:#fca5a5}
 
 .card{background:var(--surface);border-radius:20px;border:1px solid var(--border);box-shadow:var(--shadow-md);padding:1.5rem 1.8rem;margin-bottom:1.5rem}
 .card-title{font-weight:800;font-size:1.05rem;color:var(--text);display:flex;align-items:center;gap:10px;margin-bottom:1.2rem;padding-bottom:.7rem;border-bottom:1px solid var(--border);flex-wrap:wrap}

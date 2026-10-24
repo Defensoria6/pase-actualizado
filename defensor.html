@@ -87,8 +87,8 @@
         .app-wrapper.visible{display:block}
         @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 
-        .app-header{background:linear-gradient(135deg,#0f172a 0%,#1e3a8a 50%,#1e40af 100%);border-radius:24px;padding:1.2rem 2rem;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:1rem;margin-bottom:1.5rem;box-shadow:var(--shadow-lg);position:relative;overflow:hidden}
-        .app-header::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 100% 0%,rgba(59,130,246,.35) 0%,transparent 50%);pointer-events:none}
+        .app-header{--hd-ink:#172554;--hd-sub:#64748b;--hd-line:#d6e3fb;--hd-tint:#eff5ff;--hd-accent:#3b82f6;--hd-ring:rgba(59,130,246,.18);background:linear-gradient(135deg,#f9fbff 0%,#eaf1ff 100%);border:1px solid #d6e3fb;border-radius:24px;padding:1.2rem 2rem;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:1rem;margin-bottom:1.5rem;box-shadow:0 1px 2px rgba(15,23,42,.04),0 12px 28px -18px rgba(30,58,138,.22);position:relative;overflow:hidden}
+        .app-header::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 100% 0%,rgba(59,130,246,.12) 0%,transparent 55%);pointer-events:none}
         .brand{display:flex;align-items:center;gap:14px;position:relative;z-index:1}
         .brand-icon{width:52px;height:52px;background:linear-gradient(135deg,var(--primary-light),var(--primary));border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;color:#fff;box-shadow:0 8px 24px rgba(30,58,138,.55)}
         .brand h1{font-size:1.3rem;font-weight:800;color:#fff;letter-spacing:-.3px;line-height:1.2}
@@ -108,6 +108,20 @@
         .btn-header.danger{background:rgba(239,68,68,.25);border-color:rgba(239,68,68,.45);color:#fff}
         .btn-header.danger:hover{background:rgba(239,68,68,.4)}
         .btn-header.danger-outline{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.2);color:#fff}
+        /* ===== Encabezado: tono suave y minimalista ===== */
+        .app-header .brand h1{color:var(--hd-ink)}
+        .app-header .brand h1 small{color:var(--hd-sub)}
+        .app-header .badge-role{background:#fff;color:var(--hd-ink);border:1px solid var(--hd-line);backdrop-filter:none}
+        .app-header .badge-role:hover{background:#fff}
+        .app-header .badge-role.defensor{background:#e8f0ff;color:#1e3a8a;border-color:#bcd2fa}
+        .app-header .search-box i{color:#94a3b8}
+        .app-header .search-box input{background:#fff;color:var(--text);border:1px solid var(--hd-line);backdrop-filter:none}
+        .app-header .search-box input::placeholder{color:#94a3b8}
+        .app-header .search-box input:focus{background:#fff;border-color:var(--hd-accent);box-shadow:0 0 0 3px var(--hd-ring)}
+        .app-header .btn-header:not(.primary):not(.danger){background:#fff;color:var(--hd-ink);border:1px solid var(--hd-line);backdrop-filter:none}
+        .app-header .btn-header:not(.primary):not(.danger):hover{background:var(--hd-tint);border-color:var(--hd-accent)}
+        .app-header .btn-header.danger{background:#fff;color:#b91c1c;border:1px solid #fecaca;backdrop-filter:none}
+        .app-header .btn-header.danger:hover{background:#fef2f2;border-color:#fca5a5}
 
         .nav-tabs-custom{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:1.5rem;background:#fff;padding:.6rem .8rem;border-radius:20px;border:1px solid var(--border);box-shadow:var(--shadow-md);overflow-x:auto}
         .nav-tabs-custom .tab-btn{padding:.55rem 1.2rem;border-radius:10px;border:none;background:transparent;font-weight:700;font-size:.82rem;color:var(--muted);transition:all .2s;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
@@ -439,7 +453,7 @@
             <div class="brand">
                 <div class="brand-icon"><i class="bi bi-balance-scale"></i></div>
                 <div>
-                    <h1>Pase Digital <span style="color:#93c5fd;">Defensor</span>
+                    <h1>Pase Digital <span style="color:#2563eb;">Defensor</span>
                         <small>Defensoría Oficial Civil y Comercial 6</small>
                     </h1>
                 </div>
