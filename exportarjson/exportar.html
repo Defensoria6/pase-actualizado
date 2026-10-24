@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Exportar Datos · Solo Lectura · Defensoría 6</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<style>
+  :root {
+    --primary: #0b4b7a;
+    --primary-light: #1a6bb0;
+    --ok: #2e7d32;
+    --warn: #e65100;
+    --danger: #c62828;
+    --ink: #0b1e33;
+    --muted: #5f7f9f;
+    --line: #e2edf7;
+    --bg: #f0f4fc;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(135deg, #eef4fc 0%, #dde9f7 100%);
+    min-height: 100vh;
+    color: var(--ink);
+    padding: 24px 16px;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; }
+
+  .hero {
+    background: linear-gradient(135deg, #0b4b7a 0%, #1a6bb0 100%);
+    color: #fff;
+    border-radius: 28px;
+    padding: 2.2rem 2rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 20px 48px -18px rgba(11, 75, 122, 0.55);
+  }
+  .hero h1 {
+    font-weight: 800;
+    font-size: 1.7rem;
+    line-height: 1.2;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 0.4rem;
+  }
+  .hero p { opacity: 0.92; margin: 0; font-size: 0.95rem; }
+  .hero .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255,255,255,0.18);
+    padding: 6px 14px;
+    border-radius: 30px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    margin-top: 0.9rem;
+    border: 1px solid rgba(255,255,255,0.25);
+  }
+
+  .card-glass {
+    background: rgba(255,255,255,0.94);
+    border-radius: 22px;
+    padding: 1.6rem 1.7rem;
+    margin-bottom: 1.2rem;
+    border: 1px solid rgba(255,255,255,0.85);
+    box-shadow: 0 8px 28px -12px rgba(11, 30, 51, 0.12);
+  }
+  .card-glass h5 {
+    font-weight: 800;
+    font-size: 1rem;
+    color: #0a2a44;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 1rem;
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid var(--line);
+  }
+  .card-glass h5 i { color: var(--primary-light); font-size: 1.15rem; }
+
+  .safety-banner {
+    background: #e8f5e9;
+    border-left: 5px solid var(--ok);
+    color: #1b5e20;
+    padding: 14px 18px;
+    border-radius: 12px;
+    margin-bottom: 1.2rem;
+    font-weight: 600;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    font-size: 0.9rem;
+    line-height: 1.45;
+  }
+  .safety-banner i { font-size: 1.4rem; flex-shrink: 0; }
+  .safety-banner code {
+    background: #c8e6c9;
+    padding: 1px 7px;
+    border-radius: 6px;
+    font-size: 0.82rem;
+    color: #1b5e20;
+  }
+
+  .conn-status {
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    display: none;
+    line-height: 1.4;
+  }
+  .conn-status.show { display: block; }
+  .conn-status.info    { background: #e3f2fd; color: #1565c0; }
+  .conn-status.success { background: #e8f5e9; color: var(--ok); }
+  .conn-status.error   { background: #ffebee; color: var(--danger); }
+
+  .data-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  @media (max-width: 620px) { .data-grid { grid-template-columns: 1fr; } }
+
+  .data-item {
+    background: #f8fbff;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 10px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+  }
+  .data-item .label {
+    font-weight: 600;
+    color: #2c5a7a;
+    font-size: 0.82rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .data-item .label i { color: var(--primary-light); }
+  .data-item .count {
+    background: #e3f2fd;
+    color: #1565c0;
+    padding: 2px 12px;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 0.8rem;
+    min-width: 46px;
+    text-align: center;
+  }
+  .data-item .count.warn { background: #fff3e0; color: var(--warn); }
+  .data-item .count.ok   { background: #e8f5e9; color: var(--ok); }
+
+  .opt-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid #eef2f7;
+  }
+  .opt-row:last-child { border-bottom: none; }
+  .opt-row input[type="checkbox"] {
+    width: 20px; height: 20px;
+    accent-color: var(--primary-light);
+    cursor: pointer;
+    margin-top: 2px;
+    flex-shrink: 0;
+  }
+  .opt-row label {
+    cursor: pointer;
+    font-weight: 600;
+    color: #2c5a7a;
+    font-size: 0.9rem;
+    line-height: 1.35;
+    flex: 1;
+  }
+  .opt-row label .desc {
+    display: block;
+    font-weight: 500;
+    color: #8aa3bc;
+    font-size: 0.75rem;
+    margin-top: 2px;
+  }
+
+  .btn-main {
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    color: #fff;
+    border: none;
+    padding: 15px 30px;
+    border-radius: 60px;
+    font-weight: 700;
+    font-size: 0.98rem;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: 0.25s;
+  }
+  .btn-main:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 32px -10px rgba(26, 107, 176, 0.55);
+    color: #fff;
+  }
+  .btn-main:disabled { opacity: 0.55; cursor: not-allowed; }
+
+  .export-status {
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 0.88rem;
+    margin-top: 1rem;
+    display: none;
+    font-weight: 600;
+    line-height: 1.5;
+  }
+  .export-status.show { display: block; }
+  .export-status.success { background: #e8f5e9; color: var(--ok); }
+  .export-status.error   { background: #ffebee; color: var(--danger); }
+  .export-status.info    { background: #e3f2fd; color: #1565c0; }
+
+  .foot-note {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.72rem;
+    margin-top: 1rem;
+    line-height: 1.5;
+  }
+  .foot-note code {
+    background: #eef2f7;
+    padding: 1px 6px;
+    border-radius: 5px;
+    font-size: 0.7rem;
+    color: #2c5a7a;
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <div class="hero">
+    <h1><i class="bi bi-cloud-arrow-down-fill"></i> Exportar Datos del Sistema</h1>
+    <p>Descarga un respaldo JSON completo de la base de datos de la Defensoría 6.</p>
+    <span class="chip"><i class="bi bi-shield-lock-fill"></i> Modo solo lectura · Firestore</span>
+  </div>
+
+  <div class="safety-banner">
+    <i class="bi bi-shield-check"></i>
+    <div>
+      <strong>Esta herramienta NO modifica ni borra la base de datos.</strong><br />
+      No contiene operaciones <code>.set()</code>, <code>.update()</code>, <code>.add()</code> ni <code>.delete()</code> contra Firestore.
+      Solo ejecuta lecturas (<code>.get()</code>) y genera un archivo local.
+      <br /><strong>Seguro para usar en paralelo con <code>operadores.html</code>.</strong>
+    </div>
+  </div>
+
+  <div class="card-glass">
+    <h5><i class="bi bi-hdd-network-fill"></i> Estado de la conexión</h5>
+    <div id="connStatus" class="conn-status info show">
+      <i class="bi bi-hourglass-split"></i> Conectando a Firestore…
+    </div>
+    <div id="summaryBox" style="display:none;">
+      <p style="font-size:0.83rem; color:var(--muted); margin-bottom:10px;">
+        <i class="bi bi-info-circle"></i> Documentos detectados (solo lectura):
+      </p>
+      <div class="data-grid" id="dataGrid"></div>
+    </div>
+  </div>
+
+  <div class="card-glass">
+    <h5><i class="bi bi-sliders"></i> Contenido del respaldo</h5>
+
+    <div class="opt-row">
+      <input type="checkbox" id="optCausas" checked />
+      <label for="optCausas">Causas / Expedientes
+        <span class="desc">Todos los expedientes con sus historiales de movimientos.</span>
+      </label>
+    </div>
+    <div class="opt-row">
+      <input type="checkbox" id="optConfig" checked />
+      <label for="optConfig">Configuración de rotación
+        <span class="desc"><code>config.lastIndex</code> y <code>config.lastEmployeeIndex</code> (compatible con operadores.html).</span>
+      </label>
+    </div>
+    <div class="opt-row">
+      <input type="checkbox" id="optEmpleados" checked />
+      <label for="optEmpleados">Estado de empleados
+        <span class="desc">Array <code>empleados[]</code> de <code>secretario_config</code> (ausencias/reintegros).</span>
+      </label>
+    </div>
+    <div class="opt-row">
+      <input type="checkbox" id="optAusencias" checked />
+      <label for="optAusencias">Ausencias de secretarios
+        <span class="desc">Documento <code>ausencias</code> completo.</span>
+      </label>
+    </div>
+    <div class="opt-row">
+      <input type="checkbox" id="optTipos" checked />
+      <label for="optTipos">Tipos personalizados
+        <span class="desc">Documento <code>tipos_custom</code> (tipos agregados desde operadores.html).</span>
+      </label>
+    </div>
+    <div class="opt-row">
+      <input type="checkbox" id="optPuntajes" checked />
+      <label for="optPuntajes">Puntajes / Ranking
+        <span class="desc">Colección <code>puntajes</code> si existe (no la crea si no está).</span>
+      </label>
+    </div>
+    <div class="opt-row">
+      <input type="checkbox" id="optChats" />
+      <label for="optChats">Historial de chats
+        <span class="desc">Colecciones <code>chat_interno</code> y <code>chat_defensor_secretario</code>. Puede ser un archivo grande.</span>
+      </label>
+    </div>
+  </div>
+
+  <div class="card-glass">
+    <h5><i class="bi bi-download"></i> Descargar respaldo</h5>
+    <button class="btn-main" id="btnExportar" disabled>
+      <i class="bi bi-cloud-arrow-down-fill"></i>
+      <span id="btnText">Cargando datos…</span>
+    </button>
+    <div id="exportStatus" class="export-status"></div>
+    <p class="foot-note">
+      <i class="bi bi-lock-fill"></i> Operación 100 % de solo lectura.
+      Formato JSON compatible con la importación del sistema original
+      (<code>causas</code>, <code>empleados</code>, <code>ausencias</code>, <code>lastIndex</code>).
+    </p>
+  </div>
+
+  <p class="foot-note">
+    Defensoría Oficial Civil y Comercial 6 · Exportador seguro v3.0
+  </p>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ==================================================================
+  //  CONFIGURACIÓN DE FIREBASE  (idéntica a operadores.html)
+  // ==================================================================
+  const firebaseConfig = {
+    apiKey: "AIzaSyBiPiBIUTecqjifyZBqbrNw8aQNv7rwqwA",
+    authDomain: "pasedefensoria6.firebaseapp.com",
+    projectId: "pasedefensoria6",
+    storageBucket: "pasedefensoria6.firebasestorage.app",
+    messagingSenderId: "785250989941",
+    appId: "1:785250989941:web:1bfb35a5f954144dbb853c"
+  };
+
+  let db = null;
+  let dataLoaded = false;
+
+  const dbData = {
+    causas: [],
+    config: { lastIndex: -1, lastEmployeeIndex: -1 },
+    empleados: [],
+    ausencias: [],
+    tiposCustom: [],
+    puntajes: null,
+    chatInterno: [],
+    chatDefensorSecretario: [],
+    meta: {
+      secretarioConfigFound: false,
+      tiposCustomFound: false,
+      configFound: false,
+      ausenciasFound: false
+    }
+  };
+
+  function esNumeroValido(num) {
+    if (!num || typeof num !== 'string') return false;
+    const t = num.trim();
+    return t !== '' && !t.includes('undefined') && !t.includes('null');
+  }
+
+  function setConnStatus(kind, html) {
+    const el = document.getElementById('connStatus');
+    el.className = `conn-status ${kind} show`;
+    el.innerHTML = html;
+  }
+  function setExportStatus(kind, html) {
+    const el = document.getElementById('exportStatus');
+    if (kind === null) { el.className = 'export-status'; el.innerHTML = ''; return; }
+    el.className = `export-status ${kind} show`;
+    el.innerHTML = html;
+  }
+
+  // ==================================================================
+  //  INICIALIZACIÓN
+  // ==================================================================
+  function initFirebase() {
+    try {
+      if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+      db = firebase.firestore();
+      return true;
+    } catch (e) {
+      console.error('Firebase init:', e);
+      setConnStatus('error', `❌ No se pudo inicializar Firebase: ${e.message}`);
+      return false;
+    }
+  }
+
+  // ==================================================================
+  //  LECTURA (SOLO GET) DE FIRESTORE
+  // ==================================================================
+  async function cargarTodo() {
+    if (!db) return;
+
+    try {
+      setConnStatus('info', '<i class="bi bi-hourglass-split"></i> Leyendo colección <code>operador</code>…');
+
+      const snap = await db.collection('operador').get();
+
+      const causas = [];
+      let config = { lastIndex: -1, lastEmployeeIndex: -1 };
+      let ausencias = [];
+      let empleados = [];
+      let tiposCustom = [];
+
+      snap.forEach(doc => {
+        const data = doc.data();
+
+        if (doc.id === 'config') {
+          config = {
+            lastIndex: (typeof data.lastIndex === 'number') ? data.lastIndex : -1,
+            lastEmployeeIndex: (typeof data.lastEmployeeIndex === 'number') ? data.lastEmployeeIndex : -1
+          };
+          dbData.meta.configFound = true;
+          return;
+        }
+        if (doc.id === 'ausencias') {
+          ausencias = Array.isArray(data.ausencias) ? data.ausencias : [];
+          dbData.meta.ausenciasFound = true;
+          return;
+        }
+        if (doc.id === 'secretario_config') {
+          empleados = Array.isArray(data.empleados) ? data.empleados : [];
+          dbData.meta.secretarioConfigFound = true;
+          return;
+        }
+        if (doc.id === 'tipos_custom') {
+          tiposCustom = Array.isArray(data.tipos) ? data.tipos : [];
+          dbData.meta.tiposCustomFound = true;
+          return;
+        }
+
+        // Cualquier otro doc se considera una causa si tiene número válido
+        if (esNumeroValido(data.numero)) {
+          if (!data.id) data.id = doc.id;
+          // Compatibilidad: asegurar empleadoAsignado
+          if (!data.empleadoAsignado && data.empleadoId) {
+            data.empleadoAsignado = data.empleadoId;
+          }
+          causas.push(data);
+        }
+      });
+
+      dbData.causas = causas;
+      dbData.config = config;
+      dbData.empleados = empleados;
+      dbData.ausencias = ausencias;
+      dbData.tiposCustom = tiposCustom;
+
+      // ---- puntajes (solo lectura, puede no existir) ----
+      try {
+        const pDoc = await db.collection('puntajes').doc('ranking').get();
+        if (pDoc.exists) dbData.puntajes = pDoc.data();
+      } catch (e) { /* colección no accesible o no existe: ignorar */ }
+
+      // ---- chat_interno (solo lectura, puede no existir) ----
+      try {
+        const chatSnap = await db.collection('chat_interno').get();
+        const arr = [];
+        chatSnap.forEach(d => {
+          const x = d.data();
+          x._id = d.id;
+          if (x.timestamp && typeof x.timestamp.toDate === 'function') {
+            x.timestamp = x.timestamp.toDate().toISOString();
+          }
+          arr.push(x);
+        });
+        dbData.chatInterno = arr;
+      } catch (e) { /* ignorar */ }
+
+      // ---- chat_defensor_secretario ----
+      try {
+        const chatSnap = await db.collection('chat_defensor_secretario').get();
+        const arr = [];
+        chatSnap.forEach(d => {
+          const x = d.data();
+          x._id = d.id;
+          if (x.fecha && typeof x.fecha.toDate === 'function') {
+            x.fecha = x.fecha.toDate().toISOString();
+          }
+          arr.push(x);
+        });
+        dbData.chatDefensorSecretario = arr;
+      } catch (e) { /* ignorar */ }
+
+      dataLoaded = true;
+      renderSummary();
+      setConnStatus('success',
+        `<i class="bi bi-check-circle-fill"></i> <strong>Conexión exitosa.</strong> ${causas.length} causas leídas en modo solo lectura.`);
+      const btn = document.getElementById('btnExportar');
+      btn.disabled = false;
+      document.getElementById('btnText').textContent = 'Descargar Respaldo JSON';
+
+    } catch (e) {
+      console.error('Error cargando datos:', e);
+      setConnStatus('error', `❌ <strong>Error al leer Firestore:</strong> ${e.message}`);
+      const btn = document.getElementById('btnExportar');
+      btn.disabled = false;
+      document.getElementById('btnText').textContent = 'Reintentar lectura';
+    }
+  }
+
+  // ==================================================================
+  //  PANEL DE RESUMEN
+  // ==================================================================
+  function renderSummary() {
+    const grid = document.getElementById('dataGrid');
+    const items = [
+      { l: 'Causas / expedientes', i: 'bi-file-earmark-text', c: dbData.causas.length },
+      { l: 'Empleados en secretario_config', i: 'bi-people', c: dbData.empleados.length },
+      { l: 'Ausencias de secretarios', i: 'bi-person-x', c: dbData.ausencias.length },
+      { l: 'Tipos personalizados', i: 'bi-tags', c: dbData.tiposCustom.length },
+      { l: 'Puntajes / ranking', i: 'bi-trophy', c: dbData.puntajes ? Object.keys(dbData.puntajes.puntajes || {}).length : 0 },
+      { l: 'Mensajes chat interno', i: 'bi-chat-dots', c: dbData.chatInterno.length },
+      { l: 'Mensajes chat defensor', i: 'bi-chat-square-text', c: dbData.chatDefensorSecretario.length },
+      { l: 'Config rotación detectada', i: 'bi-arrow-repeat', c: (dbData.meta.configFound ? 1 : 0) }
+    ];
+    grid.innerHTML = items.map(it => {
+      let cls = 'count';
+      if (it.c === 0) cls += ' warn';
+      else cls += ' ok';
+      return `
+        <div class="data-item">
+          <span class="label"><i class="bi ${it.i}"></i> ${it.l}</span>
+          <span class="${cls}">${it.c}</span>
+        </div>`;
+    }).join('');
+    document.getElementById('summaryBox').style.display = 'block';
+  }
+
+  // ==================================================================
+  //  EXPORTACIÓN (0 escrituras)
+  // ==================================================================
+  function exportarJSON() {
+    try {
+      setExportStatus('info', '<i class="bi bi-hourglass-split"></i> Generando archivo…');
+      document.getElementById('btnExportar').disabled = true;
+      document.getElementById('btnText').textContent = 'Generando archivo…';
+
+      const incCausas    = document.getElementById('optCausas').checked;
+      const incConfig    = document.getElementById('optConfig').checked;
+      const incEmpleados = document.getElementById('optEmpleados').checked;
+      const incAusencias = document.getElementById('optAusencias').checked;
+      const incTipos     = document.getElementById('optTipos').checked;
+      const incPuntajes  = document.getElementById('optPuntajes').checked;
+      const incChats     = document.getElementById('optChats').checked;
+
+      const ahora = new Date();
+      const fechaArchivo =
+        `${ahora.getFullYear()}-${String(ahora.getMonth()+1).padStart(2,'0')}-${String(ahora.getDate()).padStart(2,'0')}_` +
+        `${String(ahora.getHours()).padStart(2,'0')}-${String(ahora.getMinutes()).padStart(2,'0')}`;
+
+      const payload = {
+        meta: {
+          exportado: ahora.toISOString(),
+          version: '3.0-readonly',
+          fuente: 'Firestore / operador',
+          soloLectura: true,
+          proyecto: firebaseConfig.projectId
+        },
+        // Compatible con importación del exportar.html original
+        causas:    incCausas    ? dbData.causas    : [],
+        empleados: incEmpleados ? dbData.empleados : [],
+        ausencias: incAusencias ? dbData.ausencias : [],
+        lastIndex: incConfig    ? dbData.config.lastIndex : -1,
+        // Campos extra (no rompen la importación, aportan al respaldo completo)
+        config: incConfig ? dbData.config : null,
+        tiposCustom: incTipos ? dbData.tiposCustom : [],
+        puntajes: incPuntajes ? dbData.puntajes : null,
+        chatInterno: incChats ? dbData.chatInterno : [],
+        chatDefensorSecretario: incChats ? dbData.chatDefensorSecretario : []
+      };
+
+      const jsonStr = JSON.stringify(payload, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `respaldo_pases_def6_${fechaArchivo}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      const kb = (jsonStr.length / 1024).toFixed(1);
+      const sizeStr = jsonStr.length > 1024 * 1024
+        ? `${(jsonStr.length / (1024*1024)).toFixed(2)} MB`
+        : `${kb} KB`;
+
+      setExportStatus('success',
+        `<i class="bi bi-check-circle-fill"></i> <strong>¡Respaldo descargado!</strong><br>
+         ${payload.causas.length} causas · ${payload.empleados.length} empleados · ${payload.ausencias.length} ausencias · ${sizeStr}.<br>
+         <small>La base de datos en Firestore NO fue modificada.</small>`);
+
+      setTimeout(() => {
+        document.getElementById('btnExportar').disabled = false;
+        document.getElementById('btnText').textContent = 'Descargar Respaldo JSON';
+      }, 900);
+
+    } catch (e) {
+      console.error('Error exportando:', e);
+      setExportStatus('error', `❌ Error al generar el archivo: ${e.message}`);
+      document.getElementById('btnExportar').disabled = false;
+      document.getElementById('btnText').textContent = 'Descargar Respaldo JSON';
+    }
+  }
+
+  // ==================================================================
+  //  EVENTOS
+  // ==================================================================
+  document.addEventListener('DOMContentLoaded', function () {
+    document.getElementById('btnExportar').addEventListener('click', function () {
+      if (dataLoaded) {
+        exportarJSON();
+      } else {
+        // Reintento de lectura
+        document.getElementById('btnExportar').disabled = true;
+        document.getElementById('btnText').textContent = 'Cargando datos…';
+        cargarTodo();
+      }
+    });
+
+    if (initFirebase()) {
+      // pequeña espera para asegurar que el DOM esté listo
+      setTimeout(cargarTodo, 250);
+    }
+  });
+
+})();
+</script>
+</body>
+</html>
