@@ -177,6 +177,20 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(-
 .crono.violeta{background:#e9d5ff;color:#6b21a8;border:2px solid #d8b4fe}
 .crono.gris{background:#f1f5f9;color:#64748b;border:2px solid #cbd5e1}
 
+/* Enlace expediente (clickable) */
+.expediente-link{
+  cursor:pointer;
+  color:var(--primary-dark);
+  font-weight:800;
+  text-decoration:underline;
+  text-decoration-style:dotted;
+  text-decoration-color:rgba(79,70,229,.4);
+  text-underline-offset:3px;
+  transition:color .15s, text-decoration-color .15s;
+}
+.expediente-link:hover{color:var(--primary);text-decoration-color:var(--primary);text-decoration-style:solid;}
+.expediente-link:active{color:var(--primary-dark);}
+
 .kpi-strip{display:flex;gap:10px;margin-bottom:1.2rem;flex-wrap:wrap}
 .kpi-card{flex:1 1 100px;min-width:100px;background:#fff;border-radius:14px;padding:12px;border:1px solid var(--border);text-align:center;border-top:3px solid var(--success);box-shadow:var(--shadow-sm);transition:transform .2s, box-shadow .2s, border-color .2s;cursor:pointer;user-select:none}
 .kpi-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
@@ -192,7 +206,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(-
 .modal-modern .modal-header{background:linear-gradient(135deg,#022c22,#065f46);color:#fff;padding:1.2rem 1.8rem;border:none}
 .modal-modern .modal-header .btn-close{filter:brightness(0) invert(1);opacity:.8}
 .modal-modern .modal-body{padding:1.8rem;max-height:70vh;overflow-y:auto}
-.modal-modern .modal-footer{border-top:1px solid var(--border);padding:1rem 1.8rem;background:#f8fafc}
+.modal-modern .modal-footer{border-top:1px solid var(--border);padding:1rem 1.8rem;background:#f8fafc;gap:.5rem}
 
 #toastContainer{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:10px;pointer-events:none;max-width:400px}
 .toast-custom{background:rgba(15,23,42,.95);color:#fff;padding:14px 20px;border-radius:14px;box-shadow:var(--shadow-lg);font-size:.87rem;display:flex;align-items:center;gap:12px;animation:slideIn .35s cubic-bezier(.16,1,.3,1);border-left:4px solid transparent}
@@ -309,17 +323,18 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(-
   </footer>
 </div>
 
-<!-- MODAL HISTORIAL -->
+<!-- MODAL HISTORIAL Y TIEMPO HÁBIL -->
 <div class="modal fade modal-modern" id="modalHistorial" tabindex="-1">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title"><i class="bi bi-clock-history me-2"></i>Historial · <span id="modalHistorialExp"></span></h5>
+        <h5 class="modal-title"><i class="bi bi-clock-history me-2"></i>Detalle · <span id="modalHistorialExp"></span></h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body" id="modalHistorialBody"></div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+        <button type="button" class="btn btn-modern btn-success-modern" onclick="imprimirModalContenido('modalHistorial')"><i class="bi bi-printer"></i> Imprimir</button>
       </div>
     </div>
   </div>
@@ -342,6 +357,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(-
         </div>
       </div>
       <div class="modal-footer">
+        <button type="button" class="btn btn-modern btn-outline-modern" onclick="imprimirModalContenido('modalEnviar')"><i class="bi bi-printer"></i> Imprimir</button>
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
         <button type="button" class="btn btn-modern btn-success-modern" id="btnConfirmarEnviar"><i class="bi bi-send-fill"></i> Enviar</button>
       </div>
@@ -365,6 +381,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(-
         </div>
       </div>
       <div class="modal-footer">
+        <button type="button" class="btn btn-modern btn-outline-modern" onclick="imprimirModalContenido('modalJustificar')"><i class="bi bi-printer"></i> Imprimir</button>
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
         <button type="button" class="btn btn-modern btn-warning-modern" id="btnConfirmarJustificar"><i class="bi bi-check2"></i> Enviar justificación</button>
       </div>
@@ -472,6 +489,7 @@ const CONFIG = {
 };
 
 const PER_PAGE = 10;
+const SESSION_KEY = 'paseDigitalEmpleadoId';
 
 let state = { causas: [] };
 let currentEmpId = '';
@@ -605,6 +623,171 @@ function esFinalizadaAntesDelPlazo(c){
   if(det.error || !det.fechaLimite || !det.fechaFin) return false;
   return new Date(det.fechaFin).getTime() <= new Date(det.fechaLimite).getTime();
 }
+
+// ============================================================
+// CUMPLIMIENTO DE PLAZO (para finalizadas)
+// ============================================================
+function getCumplimientoInfo(c, detOpt){
+  if(c.estado !== 'finalizada') return null;
+  const det = detOpt || getDetalleTiempo(c);
+  if(det.error || !det.fechaLimite || !det.fechaFin) return null;
+
+  const nivel = det.nivel;
+  const diasNivel = CONFIG.nivelesDias[nivel] || 5;
+  const finDate = new Date(det.fechaFin);
+  const limDate = new Date(det.fechaLimite);
+
+  const cumplidoAntes = finDate.getTime() <= limDate.getTime();
+
+  let margenDias = 0;
+  if(cumplidoAntes){
+    const finD = new Date(finDate); finD.setHours(0,0,0,0);
+    const limD = new Date(limDate); limD.setHours(0,0,0,0);
+    const cur = new Date(finD);
+    while(cur < limD){
+      cur.setDate(cur.getDate() + 1);
+      if(esDiaHabil(cur)) margenDias++;
+    }
+  }
+
+  return {
+    cumplidoAntes,
+    margenDias,
+    diasNivel,
+    nivel,
+    fechaLimite: limDate,
+    fechaFin: finDate,
+    diasTranscurridos: det.diasTranscurridos
+  };
+}
+
+function renderPlazoBadge(c, det){
+  if(!det || det.error) return '<span class="text-muted">—</span>';
+  if(c.estado === 'finalizada'){
+    const cumpl = getCumplimientoInfo(c, det);
+    if(cumpl && cumpl.cumplidoAntes){
+      const margenTxt = cumpl.margenDias > 0
+        ? `${cumpl.margenDias} día${cumpl.margenDias!==1?'s':''} hábil${cumpl.margenDias!==1?'es':''} antes del límite`
+        : 'justo en el límite del plazo';
+      return `<span class="crono verde" title="Plazo del nivel N${cumpl.nivel}: ${cumpl.diasNivel} días hábiles · Cumplido ${margenTxt}">✅ Cumplido (N${cumpl.nivel} · ${cumpl.diasNivel}d)</span>`;
+    }
+    if(cumpl){
+      return `<span class="crono rojo" title="Plazo del nivel N${cumpl.nivel}: ${cumpl.diasNivel} días hábiles · No cumplido">❌ Excedido (N${cumpl.nivel} · ${cumpl.diasNivel}d)</span>`;
+    }
+  }
+  return `<span class="crono ${det.estado.color}">${det.estado.label}</span>`;
+}
+
+// ============================================================
+// IMPRESIÓN GENÉRICA DE MODALES
+// ============================================================
+function imprimirModalContenido(modalId){
+  const modalEl = document.getElementById(modalId);
+  if(!modalEl){ showToast('No se encontró el modal','warning'); return; }
+
+  const titleEl = modalEl.querySelector('.modal-title');
+  const bodyEl = modalEl.querySelector('.modal-body');
+  if(!bodyEl){ showToast('No hay contenido para imprimir','warning'); return; }
+
+  const title = titleEl ? titleEl.innerText.trim().replace(/\s+/g,' ') : 'Detalle';
+  const now = new Date().toLocaleString('es-AR');
+  const w = window.open('', '_blank');
+  if(!w){ showToast('Permita ventanas emergentes para imprimir','warning'); return; }
+
+  // Clonamos el body para poder limpiar inputs/textarea sin afectar el modal
+  const clon = bodyEl.cloneNode(true);
+  // Reemplazar textareas por contenido formateado
+  clon.querySelectorAll('textarea').forEach(ta => {
+    const div = document.createElement('div');
+    div.style.cssText = 'background:#f8fafc;border:1px solid #cbd5e1;border-radius:6px;padding:8px 10px;min-height:20px;white-space:pre-wrap;font-size:12px;';
+    div.textContent = ta.value || '(sin contenido)';
+    ta.replaceWith(div);
+  });
+  // Reemplazar inputs/selects por su valor
+  clon.querySelectorAll('input').forEach(inp => {
+    if(inp.type === 'hidden') return;
+    const span = document.createElement('span');
+    span.style.fontWeight = '600';
+    span.textContent = inp.value || '(vacío)';
+    inp.replaceWith(span);
+  });
+  clon.querySelectorAll('select').forEach(sel => {
+    const span = document.createElement('span');
+    span.style.fontWeight = '600';
+    span.textContent = sel.options[sel.selectedIndex]?.text || '(sin selección)';
+    sel.replaceWith(span);
+  });
+  // Quitar botones internos del body
+  clon.querySelectorAll('button').forEach(b => b.remove());
+
+  w.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>${title}</title>
+      <style>
+        * { box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; padding: 22px; color: #0f172a; background: #fff; }
+        h4 { margin: 0 0 4px 0; font-size: 1.2rem; font-weight: 800; color: #022c22; }
+        h5 { margin: 14px 0 8px 0; font-size: 1rem; font-weight: 800; color: #022c22; }
+        h6 { margin: 12px 0 6px 0; font-size: 0.92rem; font-weight: 800; color: #0f172a; }
+        .print-meta { font-size: 0.78rem; color: #64748b; margin-top: 4px; }
+        .print-header-print { border-bottom: 2px solid #022c22; padding-bottom: 8px; margin-bottom: 14px; }
+        hr { border-color: #e2e8f0; }
+        .text-muted { color: #64748b !important; }
+        .crono { padding: 3px 10px; border-radius: 10px; font-weight: 700; font-size: 11px; display: inline-block; }
+        .crono.verde { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
+        .crono.naranja { background: #fed7aa; color: #9a3412; border: 1px solid #fdba74; }
+        .crono.rojo { background: #fecaca; color: #991b1b; border: 1px solid #fca5a5; }
+        .crono.violeta { background: #e9d5ff; color: #6b21a8; border: 1px solid #d8b4fe; }
+        .crono.gris { background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; }
+        .badge-status { display: inline-block; padding: 4px 10px; border-radius: 30px; font-weight: 700; font-size: 10px; }
+        .badge-proceso { background: #dbeafe; color: #1e40af; }
+        .badge-finalizada { background: #d1fae5; color: #065f46; }
+        .badge-para-finalizar { background: #fef3c7; color: #92400e; }
+        .badge-defensor { background: #ede9fe; color: #5b21b6; }
+        .table-modern { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 6px; }
+        .table-modern th, .table-modern td { border: 1px solid #cbd5e1; padding: 6px 8px; text-align: left; }
+        .table-modern th { background: #f1f5f9; font-weight: 800; text-transform: uppercase; font-size: 9px; letter-spacing: .4px; }
+        .dim-report-wrap { border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; }
+        .dim-report-row { display: flex; justify-content: space-between; padding: 8px 12px; border-bottom: 1px solid #e2e8f0; font-size: 12px; }
+        .dim-report-row:last-child { border-bottom: none; }
+        .dim-report-name { font-weight: 700; }
+        .dim-report-count { font-weight: 800; color: #10b981; }
+        .dim-report-pct { font-size: 10px; color: #64748b; margin-right: 12px; }
+        .dim-report-total { background: #ecfdf5; font-weight: 800; padding: 10px 12px; display: flex; justify-content: space-between; border-top: 2px solid #6ee7b7; font-size: 12px; }
+        .kpi-strip { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+        .kpi-card { flex: 1 1 90px; min-width: 90px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 10px; text-align: center; border-top: 3px solid #10b981; }
+        .kpi-card .num { font-size: 1.3rem; font-weight: 800; color: #10b981; }
+        .kpi-card .lbl { font-size: 9px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-top: 2px; }
+        .kpi-card.total { background: #10b981; border: none; }
+        .kpi-card.total .num, .kpi-card.total .lbl { color: #fff; }
+        .empty-state { padding: 20px; text-align: center; color: #64748b; }
+        .footer-print { margin-top: 18px; font-size: 10px; color: #94a3b8; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 8px; }
+        button, .btn, .btn-modern, .btn-sm-modern, .chip-close, .btn-clear-filters { display: none !important; }
+        form { margin: 0; }
+        .form-label { font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; margin: 6px 0 4px; display: block; }
+        .form-control, .form-select { display: block; width: 100%; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 10px; font-size: 12px; background: #f8fafc; color: #0f172a; }
+        .mb-3 { margin-bottom: 12px; }
+        @media print { body { padding: 12px; } }
+      </style>
+    </head>
+    <body>
+      <div class="print-header-print">
+        <h4>${title}</h4>
+        <div class="print-meta">Empleado: ${currentEmpNombre || '—'} · Impreso el ${now}</div>
+      </div>
+      <div class="print-content">${clon.innerHTML}</div>
+      <div class="footer-print">Defensoría Oficial Civil y Comercial 6 · Pase Digital</div>
+    </body>
+    </html>
+  `);
+  w.document.close();
+  setTimeout(()=>w.print(), 400);
+}
+// Exponer al window para los onclick del HTML
+window.imprimirModalContenido = imprimirModalContenido;
 
 // ============================================================
 // FILTROS KPI
@@ -893,11 +1076,11 @@ function renderTabla(){
     <table class="table-modern">
       <thead>
         <tr>
+          ${headerSortable('fechaAsignacion', 'Fecha y Hora Asignación')}
           ${headerSortable('numero', 'Expediente')}
           ${headerSortable('tipo', 'Tipo')}
           ${headerSelectNivel()}
           ${headerSelectSecretario()}
-          ${headerSortable('fechaAsignacion', 'Fecha Asignación')}
           ${headerSortable('dias', 'Días Hábiles')}
           ${headerSortable('estadoPlazo', 'Estado del Plazo')}
           ${headerSortable('estado', 'Estado')}
@@ -918,20 +1101,19 @@ function renderTabla(){
 
           return `
             <tr>
-              <td><strong>${c.numero}</strong></td>
+              <td style="font-size:.75rem; white-space:nowrap;">${fechaAsigDisplay}</td>
+              <td><strong class="expediente-link" data-id="${c.id}" title="Ver historial y tiempo hábil">${c.numero}</strong></td>
               <td style="font-size:.78rem;">${c.tipo||'—'}</td>
               <td>N${nivelMostrar}</td>
               <td><span style="background:linear-gradient(135deg,#ede9fe,#ddd6fe);color:#5b21b6;padding:4px 12px;border-radius:20px;font-weight:700;font-size:.75rem;display:inline-flex;align-items:center;gap:5px;"><i class="bi bi-person-badge-fill"></i> ${secMostrar}</span></td>
-              <td style="font-size:.75rem;">${fechaAsigDisplay}</td>
               <td>${hasTiempo ? `<span class="crono ${est.color}">${dias} día${dias!==1?'s':''}</span>` : '<span class="text-muted">—</span>'}</td>
-              <td>${hasTiempo ? `<span class="crono ${est.color}">${est.label}</span>` : '<span class="text-muted">—</span>'}</td>
+              <td>${hasTiempo ? renderPlazoBadge(c, det) : '<span class="text-muted">—</span>'}</td>
               <td>${getBadgeEstado(c.estado)}</td>
               <td style="white-space:nowrap;">
                 ${c.estado === 'en_proceso' ? `
                   <button class="btn-modern btn-success-modern btn-sm-modern btn-enviar" data-id="${c.id}" title="Enviar a Secretario"><i class="bi bi-send-fill"></i> Enviar</button>
                   ${estaVencido ? `<button class="btn-modern btn-warning-modern btn-sm-modern btn-just" data-id="${c.id}" title="Justificar demora"><i class="bi bi-clock-history"></i></button>` : ''}
-                ` : ''}
-                <button class="btn-modern btn-outline-modern btn-sm-modern btn-hist" data-id="${c.id}" title="Historial"><i class="bi bi-eye"></i></button>
+                ` : '<span class="text-muted" style="font-size:.72rem;">—</span>'}
               </td>
             </tr>
           `;
@@ -973,7 +1155,7 @@ function renderTabla(){
 
   renderPagination(total, totalPages, pagination.page);
 
-  container.querySelectorAll('.btn-hist').forEach(b=>b.addEventListener('click',()=>abrirHistorial(b.dataset.id)));
+  container.querySelectorAll('.expediente-link').forEach(b=>b.addEventListener('click',()=>abrirHistorial(b.dataset.id)));
   container.querySelectorAll('.btn-enviar').forEach(b=>b.addEventListener('click',()=>abrirEnviar(b.dataset.id)));
   container.querySelectorAll('.btn-just').forEach(b=>b.addEventListener('click',()=>abrirJustificar(b.dataset.id)));
 }
@@ -1023,19 +1205,126 @@ function abrirHistorial(id){
   if(!c) return;
   document.getElementById('modalHistorialExp').textContent = c.numero;
   const body = document.getElementById('modalHistorialBody');
-  if(!c.historial || !c.historial.length){
-    body.innerHTML = '<div class="text-muted">Sin movimientos.</div>';
-  } else {
-    body.innerHTML = c.historial.slice().reverse().map(m=>`
-      <div style="border-bottom:1px solid var(--border);padding:.7rem 0;">
-        <div class="d-flex justify-content-between flex-wrap gap-2">
-          <strong style="font-size:.85rem;">${m.accion}</strong>
-          <span class="text-muted" style="font-size:.75rem;">${fmtDt(m.fecha)}</span>
+
+  const det = getDetalleTiempo(c);
+  let tiempoHtml = '';
+  if(!det.error){
+    const fechaAsig = fmtDt(det.fechaAsignacion.toISOString());
+    const fechaInicio = fmtDt(det.fechaInicio.toISOString());
+    const fechaLimite = fmtDt(det.fechaLimite.toISOString());
+    const colorCls = det.estado.color;
+    const label = det.estado.label;
+    const cumpl = c.estado === 'finalizada' ? getCumplimientoInfo(c, det) : null;
+
+    let cumplimientoHtml = '';
+    if(cumpl){
+      if(cumpl.cumplidoAntes){
+        const margenTxt = cumpl.margenDias > 0
+          ? `${cumpl.margenDias} día${cumpl.margenDias!==1?'s':''} hábil${cumpl.margenDias!==1?'es':''} de margen`
+          : 'justo en el límite del plazo';
+        cumplimientoHtml = `
+          <div style="background:linear-gradient(135deg,#ecfdf5,#d1fae5);border:2px solid #6ee7b7;border-radius:12px;padding:.9rem 1.1rem;margin-bottom:1rem;">
+            <div style="display:flex;align-items:center;gap:8px;font-weight:800;color:#065f46;font-size:.92rem;margin-bottom:.55rem;">
+              <i class="bi bi-check-circle-fill" style="font-size:1.2rem;"></i>
+              Expediente cumplido antes del plazo
+            </div>
+            <div style="font-size:.82rem;color:#064e3b;line-height:1.7;">
+              <div><strong>Plazo del Nivel N${cumpl.nivel}:</strong> ${cumpl.diasNivel} día${cumpl.diasNivel!==1?'s':''} hábil${cumpl.diasNivel!==1?'es':''} permitido${cumpl.diasNivel!==1?'s':''}</div>
+              <div><strong>Días hábiles utilizados:</strong> ${cumpl.diasTranscurridos}</div>
+              <div><strong>Resultado:</strong> Finalizado con ${margenTxt}</div>
+            </div>
+          </div>
+        `;
+      } else {
+        cumplimientoHtml = `
+          <div style="background:#fef2f2;border:2px solid #fecaca;border-radius:12px;padding:.9rem 1.1rem;margin-bottom:1rem;">
+            <div style="display:flex;align-items:center;gap:8px;font-weight:800;color:#991b1b;font-size:.92rem;margin-bottom:.55rem;">
+              <i class="bi bi-x-circle-fill" style="font-size:1.2rem;"></i>
+              Expediente finalizado fuera del plazo
+            </div>
+            <div style="font-size:.82rem;color:#7f1d1d;line-height:1.7;">
+              <div><strong>Plazo del Nivel N${cumpl.nivel}:</strong> ${cumpl.diasNivel} día${cumpl.diasNivel!==1?'s':''} hábil${cumpl.diasNivel!==1?'es':''} permitido${cumpl.diasNivel!==1?'s':''}</div>
+              <div><strong>Días hábiles utilizados:</strong> ${cumpl.diasTranscurridos}</div>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    const estadoBadgeLabel = (c.estado === 'finalizada' && cumpl)
+      ? (cumpl.cumplidoAntes ? 'Cumplido antes del plazo' : 'Finalizado fuera del plazo')
+      : label;
+
+    tiempoHtml = `
+      ${cumplimientoHtml}
+      <div style="background:#f8fafc;border:1px solid var(--border);border-radius:14px;padding:1rem 1.1rem;margin-bottom:1.2rem;">
+        <h6 style="font-weight:800;font-size:.85rem;color:#0f172a;margin-bottom:.8rem;display:flex;align-items:center;gap:8px;">
+          <i class="bi bi-hourglass-split" style="color:var(--success);"></i> Detalle de Tiempo Hábil
+        </h6>
+        <div style="display:flex;align-items:center;gap:1.2rem;flex-wrap:wrap;margin-bottom:.8rem;">
+          <div style="text-align:center;min-width:96px;">
+            <div class="crono ${colorCls}" style="font-size:1.4rem;padding:.4rem 1rem;cursor:default;">${det.diasTranscurridos}</div>
+            <div style="font-size:.7rem;color:var(--muted);margin-top:4px;">día${det.diasTranscurridos!==1?'s':''} hábil${det.diasTranscurridos!==1?'es':''}</div>
+          </div>
+          <div style="flex:1;min-width:180px;font-size:.82rem;line-height:1.6;">
+            <div><span style="color:var(--muted);font-weight:600;">Expediente:</span> <strong>${c.numero}</strong></div>
+            <div><span style="color:var(--muted);font-weight:600;">Nivel:</span> <strong>N${det.nivel}</strong> <span style="color:var(--muted);font-size:.75rem;">(${CONFIG.nivelesDias[det.nivel]||5} días hábiles)</span></div>
+            <div><span style="color:var(--muted);font-weight:600;">Estado del plazo:</span> <span class="crono ${colorCls}" style="font-size:.7rem;padding:2px 10px;cursor:default;">${estadoBadgeLabel}</span></div>
+          </div>
         </div>
-        <div style="font-size:.8rem;color:var(--muted);margin-top:4px;"><i class="bi bi-person"></i> ${m.usuario} — ${m.comentario||'—'}</div>
+        <div style="font-size:.8rem;border-top:1px dashed var(--border);padding-top:.7rem;">
+          <div style="display:flex;justify-content:space-between;padding:3px 0;">
+            <span style="color:var(--muted);font-weight:600;">Fecha de asignación:</span>
+            <span style="font-weight:600;">${fechaAsig}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:3px 0;">
+            <span style="color:var(--muted);font-weight:600;">Fecha de inicio (regla):</span>
+            <span style="font-weight:600;">${fechaInicio}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:3px 0;">
+            <span style="color:var(--muted);font-weight:600;">Fecha límite:</span>
+            <span style="font-weight:600;">${fechaLimite}</span>
+          </div>
+          ${det.esFinalizada && det.fechaFin ? `
+          <div style="display:flex;justify-content:space-between;padding:3px 0;">
+            <span style="color:var(--muted);font-weight:600;">Fecha de finalización:</span>
+            <span style="font-weight:600;">${fmtDt(det.fechaFin.toISOString ? det.fechaFin.toISOString() : det.fechaFin)}</span>
+          </div>` : ''}
+        </div>
+        <div style="margin-top:.6rem;font-size:.7rem;color:var(--muted);font-style:italic;line-height:1.4;">
+          * La fecha de inicio se calcula según la regla: si la asignación es después de las 12:00, se inicia al siguiente día hábil a las 7:00. La fecha límite se calcula sumando los días hábiles del nivel correspondiente (N1: 5d · N2: 3d · N3: 3d · N4: 2d).
+        </div>
       </div>
-    `).join('');
+    `;
+  } else {
+    tiempoHtml = `
+      <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:14px;padding:.9rem 1.1rem;margin-bottom:1.2rem;color:#991b1b;font-size:.85rem;">
+        <i class="bi bi-info-circle me-1"></i> ${det.error}
+      </div>
+    `;
   }
+
+  let historialHtml = '';
+  if(!c.historial || !c.historial.length){
+    historialHtml = '<div class="text-muted" style="font-size:.85rem;">Sin movimientos registrados.</div>';
+  } else {
+    historialHtml = `
+      <h6 style="font-weight:800;font-size:.85rem;color:#0f172a;margin-bottom:.6rem;display:flex;align-items:center;gap:8px;">
+        <i class="bi bi-list-check" style="color:var(--success);"></i> Historial de movimientos
+      </h6>
+      ${c.historial.slice().reverse().map(m=>`
+        <div style="border-bottom:1px solid var(--border);padding:.7rem 0;">
+          <div class="d-flex justify-content-between flex-wrap gap-2">
+            <strong style="font-size:.85rem;">${m.accion}</strong>
+            <span class="text-muted" style="font-size:.75rem;">${fmtDt(m.fecha)}</span>
+          </div>
+          <div style="font-size:.8rem;color:var(--muted);margin-top:4px;"><i class="bi bi-person"></i> ${m.usuario||'Sistema'} — ${m.comentario||'—'}</div>
+        </div>
+      `).join('')}
+    `;
+  }
+
+  body.innerHTML = tiempoHtml + historialHtml;
   new bootstrap.Modal(document.getElementById('modalHistorial')).show();
 }
 
@@ -1109,7 +1398,7 @@ async function confirmarJustificar(){
 }
 
 // ============================================================
-// REPORTE (REESCRITO)
+// REPORTE
 // ============================================================
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
@@ -1207,7 +1496,7 @@ function renderListaReporte(titulo, items){
                 <td style="font-size:.72rem;">${c.secretarioNombre||getSecName(c.secretarioId)}</td>
                 <td style="font-size:.72rem;">${fechaAsigIso?fmtDt(fechaAsigIso):'—'}</td>
                 <td>${hasDet ? det.diasTranscurridos : '—'}</td>
-                <td>${hasDet ? `<span class="crono ${det.estado.color}">${det.estado.label}</span>` : '—'}</td>
+                <td>${renderPlazoBadge(c, det)}</td>
               </tr>`;
             }).join('')}
           </tbody>
@@ -1337,10 +1626,7 @@ function imprimirReporteEmpleado(){
 }
 
 // ============================================================
-// CHAT CON SECRETARIOS (colección compartida: chat_interno)
-// Documento: { empleadoId, remitente, texto, timestamp, leido }
-// - Empleado escribe con remitente = su nombre
-// - Secretarios escriben con remitente = 'Secretario' y el mismo empleadoId
+// CHAT CON SECRETARIOS
 // ============================================================
 const CHAT_COL = 'chat_interno';
 let chatUnsub = null;
@@ -1420,7 +1706,6 @@ function iniciarChat(){
   chatTituloOriginal=document.title;
   document.getElementById('chatWidget').style.display='block';
   chatPrimeraCarga=true;
-  // Solo "where": evita requerir índice compuesto en Firestore. El orden se hace en el cliente.
   chatUnsub=db.collection(CHAT_COL).where('empleadoId','==',currentEmpId).onSnapshot(snap=>{
     const nuevos=[];
     if(!chatPrimeraCarga){
@@ -1468,7 +1753,6 @@ function chatEnviar(){
   const txt=inp.value.trim();
   if(!txt || !currentEmpId) return;
   inp.value='';
-  // Se guarda con caracteres HTML escapados: secretarios muestra el texto con innerHTML.
   db.collection(CHAT_COL).add({
     empleadoId:currentEmpId,
     remitente:currentEmpNombre,
@@ -1500,19 +1784,11 @@ document.getElementById('chatInput').addEventListener('keydown',e=>{ if(e.key===
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden && currentEmpId) chatMarcarLeidos(); });
 
 // ============================================================
-// LOGIN
+// SESIÓN: INICIO / RESTAURACIÓN / CIERRE
 // ============================================================
-async function handleLogin(){
-  const empId = document.getElementById('loginEmpleado').value;
-  const pass = document.getElementById('loginPassword').value;
-  const err = document.getElementById('loginError');
-
-  if(!empId){ err.textContent='❌ Seleccione un empleado.'; err.style.display='block'; setTimeout(()=>err.style.display='none',2500); return; }
-  const emp = CONFIG.empleados.find(e=>e.id===empId);
-  if(!emp || pass !== emp.clave){ err.textContent='❌ Clave incorrecta.'; err.style.display='block'; setTimeout(()=>err.style.display='none',2500); return; }
-
-  err.style.display='none';
-  currentEmpId = empId;
+function iniciarSesionEmpleado(emp, opts){
+  opts = opts || {};
+  currentEmpId = emp.id;
   currentEmpNombre = emp.nombre;
   document.getElementById('empleadoNombre').textContent = emp.nombre;
   document.getElementById('loginOverlay').style.display='none';
@@ -1528,14 +1804,39 @@ async function handleLogin(){
 
   loadState();
   iniciarChat();
-  showToast(`Bienvenido/a ${emp.nombre}`,'success');
+
+  if(opts.restored){
+    showToast(`Sesión restaurada · ${emp.nombre}`,'info');
+  } else {
+    showToast(`Bienvenido/a ${emp.nombre}`,'success');
+  }
+
+  if(refreshInterval) clearInterval(refreshInterval);
   refreshInterval = setInterval(()=>{ if(!document.hidden){ } }, 15*60*1000);
+}
+
+async function handleLogin(){
+  const empId = document.getElementById('loginEmpleado').value;
+  const pass = document.getElementById('loginPassword').value;
+  const err = document.getElementById('loginError');
+
+  if(!empId){ err.textContent='❌ Seleccione un empleado.'; err.style.display='block'; setTimeout(()=>err.style.display='none',2500); return; }
+  const emp = CONFIG.empleados.find(e=>e.id===empId);
+  if(!emp || pass !== emp.clave){ err.textContent='❌ Clave incorrecta.'; err.style.display='block'; setTimeout(()=>err.style.display='none',2500); return; }
+
+  err.style.display='none';
+
+  // Persistir sesión (solo se borra al pulsar "Salir")
+  try{ localStorage.setItem(SESSION_KEY, empId); }catch(e){}
+
+  iniciarSesionEmpleado(emp);
 }
 
 function cerrarSesion(){
   detenerChat();
   if(unsubscribe) unsubscribe();
   if(refreshInterval) clearInterval(refreshInterval);
+  try{ localStorage.removeItem(SESSION_KEY); }catch(e){}
   document.getElementById('logoutAlert').classList.remove('show');
   document.getElementById('appWrapper').classList.remove('visible');
   document.getElementById('loginOverlay').style.display='flex';
@@ -1574,11 +1875,25 @@ document.addEventListener('DOMContentLoaded', function(){
   document.getElementById('btnConfirmarEnviar').addEventListener('click', confirmarEnviar);
   document.getElementById('btnConfirmarJustificar').addEventListener('click', confirmarJustificar);
 
-  // Reporte: selector de tipo + imprimir
   document.getElementById('selectTipoReporte').addEventListener('change', function(){
     renderReporteByTipo(this.value);
   });
   document.getElementById('btnImprimirReporte').addEventListener('click', imprimirReporteEmpleado);
+
+  // === RESTAURACIÓN DE SESIÓN ===
+  // Si existe un ID guardado en localStorage y NO se pulsó "Salir", se reingresa automáticamente.
+  let savedId = null;
+  try{ savedId = localStorage.getItem(SESSION_KEY); }catch(e){}
+  if(savedId){
+    const emp = CONFIG.empleados.find(e => e.id === savedId);
+    if(emp){
+      // Auto-login silencioso (sin pedir credenciales)
+      iniciarSesionEmpleado(emp, {restored: true});
+    } else {
+      // ID guardado inválido (empleado eliminado de la lista): limpiar
+      try{ localStorage.removeItem(SESSION_KEY); }catch(e){}
+    }
+  }
 });
 })();
 </script>
